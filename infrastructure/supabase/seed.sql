@@ -1,0 +1,1 @@
+-- Optional local seed data. Keep empty for remote; use create_tenant() after auth signup.
