@@ -45,7 +45,7 @@ export async function signUp(
       data: {
         full_name: fullName || undefined,
       },
-      emailRedirectTo: `${getSiteOrigin()}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${getSiteOrigin()}/auth/callback?next=/onboarding/organization`,
     },
   });
 
@@ -60,7 +60,7 @@ export async function signUp(
     };
   }
 
-  redirect("/dashboard");
+  redirect("/onboarding/organization");
 }
 
 export async function signIn(
@@ -85,12 +85,15 @@ export async function signIn(
     return { error: error.message };
   }
 
+  // Proxy will send users without an organization to onboarding.
   redirect(nextPath.startsWith("/") ? nextPath : "/dashboard");
 }
 
 export async function signOut() {
+  const { clearActiveTenantCookie } = await import("@/lib/tenancy/cookie");
   const supabase = await createClient();
   await supabase.auth.signOut();
+  await clearActiveTenantCookie();
   redirect("/login");
 }
 

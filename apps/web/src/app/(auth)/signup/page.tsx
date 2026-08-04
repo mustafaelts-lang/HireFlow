@@ -11,7 +11,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle="Start with a recruiter account. Company setup comes later."
+      subtitle="Start with your account. You’ll create your organization next and become Owner."
     >
       <SignupForm />
     </AuthShell>

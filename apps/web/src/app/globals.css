@@ -261,3 +261,123 @@ body {
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 252, 247, 0.72);
+}
+
+.app-nav a {
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.app-nav a:hover {
+  color: var(--color-accent);
+}
+
+.app-nav-meta {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.settings-form {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 1rem;
+  max-width: 28rem;
+}
+
+.settings-form select,
+.data-table select {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--color-text);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.95rem;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.stack-lg {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.team-panels {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.app-panel h2 {
+  font-family: var(--font-fraunces), serif;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.data-table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.7rem 0.55rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.text-button {
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+}
+
+.text-button.danger {
+  color: var(--color-danger);
+}
+
+.invite-link,
+.invite-code {
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.invite-link code,
+.invite-code {
+  background: #f1ece4;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+}

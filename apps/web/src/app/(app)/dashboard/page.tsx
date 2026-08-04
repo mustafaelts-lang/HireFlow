@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireTenantContext } from "@/lib/tenancy/require-tenant";
+import { ROLE_LABELS } from "@/lib/tenancy/roles";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const context = await requireTenantContext();
+  const { tenant, role } = context.membership;
 
   return (
     <section className="app-panel">
-      <h1>Welcome back</h1>
+      <h1>Welcome to {tenant.name}</h1>
       <p>
-        You’re signed in as <strong>{user?.email}</strong>. Recruiting features
-        will land in later sprints — this shell confirms authentication works.
+        Signed in as <strong>{context.email}</strong> with role{" "}
+        <strong>{ROLE_LABELS[role]}</strong>. Jobs and candidates arrive in
+        later sprints — this workspace confirms multi-tenant isolation.
       </p>
     </section>
   );
