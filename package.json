@@ -1,0 +1,25 @@
+{
+  "name": "hireflow",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint": "npm run lint --prefix apps/web",
+    "format": "prettier --write \"apps/web/**/*.{ts,tsx,js,jsx,mjs,css,json,md}\"",
+    "format:check": "prettier --check \"apps/web/**/*.{ts,tsx,js,jsx,mjs,css,json,md}\""
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx,js,jsx,mjs}": [
+      "npm run lint --prefix apps/web -- --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "apps/web/**/*.{css,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1"
+  }
+}
