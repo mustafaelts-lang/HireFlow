@@ -11,6 +11,7 @@ function isAppRoute(pathname: string) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/pipelines") ||
+    pathname.startsWith("/jobs") ||
     pathname === "/"
   );
 }

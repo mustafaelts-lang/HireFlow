@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { hasJobPermission } from "@/lib/jobs/permissions";
 import { hasPipelinePermission } from "@/lib/pipelines/permissions";
 import { hasPermission } from "@/lib/tenancy/permissions";
 import { ROLE_LABELS, type TenantRole } from "@/lib/tenancy/roles";
@@ -13,10 +14,12 @@ export function AppNav({ organizationName, role }: AppNavProps) {
   const canReadSettings = hasPermission(role, "tenant.settings.read");
   const canReadUsers = hasPermission(role, "tenant.users.read");
   const canReadPipelines = hasPipelinePermission(role, "pipelines.read");
+  const canReadJobs = hasJobPermission(role, "jobs.read");
 
   return (
     <nav className="app-nav">
       <Link href="/dashboard">Dashboard</Link>
+      {canReadJobs ? <Link href="/jobs">Jobs</Link> : null}
       {canReadPipelines ? <Link href="/pipelines">Pipelines</Link> : null}
       {canReadSettings ? (
         <Link href="/settings/organization">Organization</Link>
