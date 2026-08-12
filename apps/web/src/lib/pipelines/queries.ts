@@ -32,6 +32,7 @@ type StageRow = {
   sla_days: number | null;
   category: string;
   notes: string | null;
+  is_applied_entry: boolean;
 };
 
 function mapTemplate(row: TemplateRow): PipelineTemplate {
@@ -62,6 +63,7 @@ function mapStage(row: StageRow): PipelineTemplateStage | null {
     slaDays: row.sla_days,
     category: row.category,
     notes: row.notes ?? "",
+    isAppliedEntry: Boolean(row.is_applied_entry),
   };
 }
 
@@ -117,7 +119,9 @@ export async function getPipelineTemplate(
 
   const { data: stageRows, error: stagesError } = await supabase
     .from("pipeline_template_stages")
-    .select("id, key, name, sort_order, color, sla_days, category, notes")
+    .select(
+      "id, key, name, sort_order, color, sla_days, category, notes, is_applied_entry",
+    )
     .eq("tenant_id", tenantId)
     .eq("template_id", templateId)
     .order("sort_order", { ascending: true });

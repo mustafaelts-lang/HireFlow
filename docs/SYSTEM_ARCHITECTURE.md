@@ -143,7 +143,7 @@ Browser (Recruiter)
   → permission check (pipeline.transition)
   → pipeline service (validate transition rules)
   → persistence transaction:
-        update applications.current_stage
+        update applications.current_job_stage_id
         insert application_stage_events
   → response DTO
 ```

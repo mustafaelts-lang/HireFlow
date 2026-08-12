@@ -180,6 +180,17 @@ function SortableStageRow({
             }
           />
         </label>
+
+        <label className="auth-field">
+          <span>Applied entry</span>
+          <input
+            type="radio"
+            name="applied-entry-stage"
+            checked={Boolean(stage.isAppliedEntry)}
+            disabled={readOnly}
+            onChange={() => onChange({ ...stage, isAppliedEntry: true })}
+          />
+        </label>
       </div>
 
       {!readOnly ? (
@@ -233,6 +244,7 @@ export function StageEditor({ stages, onChange, readOnly }: StageEditorProps) {
         slaDays: null,
         category: "custom",
         notes: "",
+        isAppliedEntry: false,
       },
     ]);
   }
@@ -265,6 +277,16 @@ export function StageEditor({ stages, onChange, readOnly }: StageEditorProps) {
                 index={index}
                 readOnly={readOnly}
                 onChange={(next) => {
+                  if (next.isAppliedEntry) {
+                    onChange(
+                      stages.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? next
+                          : { ...item, isAppliedEntry: false },
+                      ),
+                    );
+                    return;
+                  }
                   const copy = [...stages];
                   copy[index] = next;
                   onChange(copy);

@@ -371,6 +371,8 @@ SLA guidance (soft, not system-enforced in MVP):
 - Same candidate should not have two **active** applications for the **same** job.
 - Multiple **historical** (non-active) applications for the same candidate + job are allowed; each application row keeps an immutable identity (`tenant_id`, `candidate_id`, `job_id`).
 - Lifecycle status (`active` / `hired` / `disqualified` / `withdrawn` / `transferred`) is separate from pipeline stage. Do not treat stage names as lifecycle state.
+- New applications enter the job’s designated **Applied entry stage** (`job_stages.is_applied_entry`). Applied and Review are different stages; recruiters move Applied → Review manually.
+- Pipeline transitions use `transition_application_stage`. Transitions into hired/closed (lifecycle-terminal) stages are rejected until dedicated lifecycle workflows exist.
 - Re-application to the same job after a non-active outcome is a **new application row** (future workflow), not rewriting the prior row’s `job_id`.
 
 ---

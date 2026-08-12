@@ -148,7 +148,7 @@ The central pipeline record.
 | `tenant_id`            | UUID FK              |                                                    |
 | `job_id`               | UUID FK → jobs       |                                                    |
 | `candidate_id`         | UUID FK → candidates |                                                    |
-| `current_stage`        | TEXT NOT NULL        | Pipeline stage key (stage ID foundation comes later) |
+| `current_job_stage_id` | UUID FK → job_stages | Pipeline position source of truth (same job)       |
 | `status`               | TEXT NOT NULL        | Lifecycle state (not derived from stage names)       |
 | `reject_reason_code`   | TEXT NULL            | Required when rejected                             |
 | `hired_at`             | TIMESTAMPTZ NULL     |                                                    |
@@ -166,39 +166,73 @@ The central pipeline record.
 **Lifecycle vs pipeline stage:**
 
 - `status` is **application lifecycle state**: `active`, `hired`, `disqualified`, `withdrawn`, `transferred`.
-- Pipeline position is separate (`current_stage` today; `current_job_stage_id` in a later hardening step).
+- Pipeline position is **only** `current_job_stage_id` → `job_stages` for the same `job_id`.
 - Do **not** derive lifecycle state from arbitrary stage names.
+- New applications are created in the job’s designated **Applied entry stage** (`job_stages.is_applied_entry`), not “first by sort order” and not generic intake.
 
 **Constraints:**
 
 - Partial unique: at most one row with `status = 'active'` per `(tenant_id, job_id, candidate_id)` — historical (non-active) applications for the same pair are allowed
 - Identity fields `tenant_id`, `candidate_id`, and `job_id` are **immutable after insert** (trigger-enforced). Moving a candidacy to another job creates a new application row in a later step — never rewrite `job_id`
+- Composite FK: `(current_job_stage_id, job_id) → job_stages(id, job_id)`
+- `current_job_stage_id` changes only via `transition_application_stage` (guard trigger)
 - FK integrity: job and candidate must share same `tenant_id`
 
-**Indexes:** `(tenant_id, job_id, current_stage)`, `(tenant_id, candidate_id)`, partial unique on active `(tenant_id, job_id, candidate_id)`
+**Indexes:** `(tenant_id, job_id, current_job_stage_id)`, `(tenant_id, candidate_id)`, partial unique on active `(tenant_id, job_id, candidate_id)`
 
 ### 3.7 `application_stage_events`
 
-Append-only transition log.
+Append-only transition log with immutable stage snapshots.
 
-| Column           | Type                   | Notes                              |
-| ---------------- | ---------------------- | ---------------------------------- |
-| `id`             | UUID PK                |                                    |
-| `tenant_id`      | UUID FK                |                                    |
-| `application_id` | UUID FK → applications |                                    |
-| `from_stage`     | TEXT NULL              | Null for initial                   |
-| `to_stage`       | TEXT NOT NULL          |                                    |
-| `actor_user_id`  | UUID FK → users NULL   | Null for public-form initial event |
-| `note`           | TEXT                   |                                    |
-| `reason_code`    | TEXT                   | Especially for rejects             |
-| `occurred_at`    | TIMESTAMPTZ NOT NULL   |                                    |
+| Column               | Type                   | Notes                                              |
+| -------------------- | ---------------------- | -------------------------------------------------- |
+| `id`                 | UUID PK                |                                                    |
+| `tenant_id`          | UUID FK                |                                                    |
+| `application_id`     | UUID FK → applications |                                                    |
+| `job_id`             | UUID FK → jobs         | Same job as application; enables composite stage FK |
+| `event_type`         | TEXT NOT NULL          | `initial`, `transition`, `migration_backfill`      |
+| `from_job_stage_id`  | UUID NULL              | Soft live ref; `ON DELETE SET NULL`                |
+| `to_job_stage_id`    | UUID NULL              | Soft live ref; `ON DELETE SET NULL`                |
+| `from_stage_key`     | TEXT NULL              | Snapshot (null on initial)                         |
+| `from_stage_name`    | TEXT NULL              | Snapshot                                           |
+| `from_stage_category`| TEXT NULL              | Snapshot                                           |
+| `to_stage_key`       | TEXT NOT NULL          | Snapshot                                           |
+| `to_stage_name`      | TEXT NOT NULL          | Snapshot                                           |
+| `to_stage_category`  | TEXT NOT NULL          | Snapshot                                           |
+| `actor_user_id`      | UUID FK → users NULL   | Null for public-form initial event                 |
+| `note`               | TEXT                   |                                                    |
+| `reason_code`        | TEXT                   | Especially for rejects                             |
+| `occurred_at`        | TIMESTAMPTZ NOT NULL   | When **this event** occurred (History Never Lies)  |
+| `metadata`           | JSONB                  | e.g. `application_created_at` on migration_backfill |
 
 **Indexes:** `(application_id, occurred_at)`, `(tenant_id, occurred_at DESC)`  
-**Rule:** no updates/deletes in normal application flow.
+**Rule:** no updates/deletes (append-only trigger). Timeline UI must read snapshot columns, not live `job_stages.name`.
 
-### 3.8 `pipeline_stages`
+### 3.8 `job_stages` (job pipeline snapshot)
 
-Tenant-configurable stage catalog (seeded with defaults).
+Per-job stages copied from a pipeline template at sync/publish time.
+
+| Column             | Type          | Notes                                              |
+| ------------------ | ------------- | -------------------------------------------------- |
+| `id`               | UUID PK       |                                                    |
+| `tenant_id`        | UUID FK       |                                                    |
+| `job_id`           | UUID FK       |                                                    |
+| `key`              | TEXT NOT NULL | Stable key                                         |
+| `name`             | TEXT NOT NULL | Display label                                      |
+| `sort_order`       | INT NOT NULL  |                                                    |
+| `color`            | TEXT          | Hex                                                |
+| `sla_days`         | INT NULL      |                                                    |
+| `category`         | TEXT NOT NULL | intake/screening/…/hired/closed/custom             |
+| `notes`            | TEXT NULL     |                                                    |
+| `is_applied_entry` | BOOLEAN       | Exactly one true per job (partial unique)          |
+
+**Constraints:** `UNIQUE (job_id, key)`, `UNIQUE (id, job_id)` (composite FK target), exactly one `is_applied_entry` per job.
+
+Public/manual apply always enters the Applied entry stage. Applied ≠ Review; Review is a later manual transition.
+
+### 3.8b `pipeline_stages` (legacy tenant catalog)
+
+Tenant-configurable stage catalog (seeded with defaults; templates are preferred for new jobs).
 
 | Column       | Type          | Notes                                           |
 | ------------ | ------------- | ----------------------------------------------- |
@@ -429,7 +463,7 @@ Store as text with check constraints or Postgres enums. Text + check is more mig
 
 | Access pattern         | Supporting index                                            |
 | ---------------------- | ----------------------------------------------------------- |
-| Board by job           | `(tenant_id, job_id, current_stage)` on applications        |
+| Board by job           | `(tenant_id, job_id, current_job_stage_id)` on applications |
 | Public apply lookup    | unique `jobs.public_apply_token`                            |
 | Candidate search       | `(tenant_id, email)`, trigram/`ILIKE` strategy later        |
 | Upcoming interviews    | `(tenant_id, scheduled_starts_at)` WHERE status = scheduled |
@@ -469,8 +503,8 @@ Support tenant-level export (JSON/CSV) as a design goal for GDPR readiness.
 
 1. Resolve job by `public_apply_token`; verify `status = open` and `apply_enabled`
 2. Upsert candidate by `(tenant_id, email)`
-3. Insert `applications` with `current_stage = 'applied'`, `submitted_via = 'public_form'`, consent fields
-4. Insert `application_stage_events` (`from_stage` null → `applied`, `actor_user_id` null)
+3. Insert `applications` (defaults into job Applied entry stage via `is_applied_entry`)
+4. Insert `application_stage_events` (`event_type=initial`, snapshots, `actor_user_id` null for public)
 5. Store resume `files` row owned by application/candidate
 
 ### 10.2 Offer accepted → pre-hire

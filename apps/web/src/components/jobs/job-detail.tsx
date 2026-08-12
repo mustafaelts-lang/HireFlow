@@ -228,6 +228,7 @@ export function JobDetailActions({
                 <strong>{stage.name}</strong>
                 <div className="muted small">
                   {stage.category}
+                  {stage.isAppliedEntry ? " · Applied entry" : ""}
                   {stage.slaDays != null ? ` · SLA ${stage.slaDays}d` : ""}
                 </div>
               </div>

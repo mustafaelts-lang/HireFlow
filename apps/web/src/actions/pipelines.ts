@@ -54,6 +54,7 @@ function validateStages(stages: PipelineTemplateStageInput[]): string | null {
 
   const keys = new Set<string>();
   const orders = new Set<number>();
+  let appliedEntryCount = 0;
 
   for (const [index, stage] of stages.entries()) {
     if (!stage.name?.trim()) {
@@ -85,6 +86,17 @@ function validateStages(stages: PipelineTemplateStageInput[]): string | null {
       return "Stage order must be unique.";
     }
     orders.add(stage.sortOrder);
+
+    if (stage.isAppliedEntry) {
+      appliedEntryCount += 1;
+      if (stage.category === "hired" || stage.category === "closed") {
+        return "The Applied entry stage cannot be a hired/closed category.";
+      }
+    }
+  }
+
+  if (appliedEntryCount !== 1) {
+    return "Exactly one stage must be marked as the Applied entry stage.";
   }
 
   return null;
@@ -100,6 +112,7 @@ function normalizeStages(
       key: (stage.key || slugifyStageKey(stage.name)).trim(),
       sortOrder: index + 1,
       notes: stage.notes?.trim() ?? "",
+      isAppliedEntry: Boolean(stage.isAppliedEntry),
       slaDays:
         stage.slaDays === null ||
         stage.slaDays === undefined ||
@@ -168,6 +181,7 @@ export async function createPipelineTemplate(
         sla_days: stage.slaDays,
         category: stage.category,
         notes: stage.notes || null,
+        is_applied_entry: stage.isAppliedEntry,
       })),
     );
 
@@ -280,6 +294,7 @@ export async function updatePipelineTemplate(
         sla_days: stage.slaDays,
         category: stage.category,
         notes: stage.notes || null,
+        is_applied_entry: stage.isAppliedEntry,
       })),
     );
 

@@ -41,6 +41,8 @@ export type JobStage = {
   slaDays: number | null;
   category: string;
   notes: string | null;
+  /** Exactly one stage per job is the system Applied entry stage. */
+  isAppliedEntry: boolean;
 };
 
 export type JobRecord = {

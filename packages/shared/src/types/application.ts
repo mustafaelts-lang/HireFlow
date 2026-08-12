@@ -1,6 +1,6 @@
 /**
  * System-level application lifecycle state.
- * Separate from pipeline stage (`current_stage` / future `current_job_stage_id`).
+ * Separate from pipeline stage (`currentJobStageId`).
  * Do not derive these values from arbitrary stage names.
  */
 export type ApplicationLifecycleStatus =
@@ -10,13 +10,18 @@ export type ApplicationLifecycleStatus =
   | "withdrawn"
   | "transferred";
 
+export type ApplicationStageEventType =
+  | "initial"
+  | "transition"
+  | "migration_backfill";
+
 export interface Application {
   id: string;
   tenantId: string;
   jobId: string;
   candidateId: string;
-  /** Pipeline stage key (legacy text). Stage ID foundation is a later hardening step. */
-  currentStage: string;
+  /** Pipeline position source of truth (job_stages.id for this job). */
+  currentJobStageId: string;
   status: ApplicationLifecycleStatus;
   createdAt: string;
   updatedAt: string;

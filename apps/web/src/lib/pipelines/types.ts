@@ -46,6 +46,8 @@ export type PipelineTemplateStageInput = {
   slaDays: number | null;
   category: StageCategory;
   notes: string;
+  /** Exactly one stage per template must be the system Applied entry stage. */
+  isAppliedEntry: boolean;
 };
 
 export type PipelineTemplateStage = PipelineTemplateStageInput & {

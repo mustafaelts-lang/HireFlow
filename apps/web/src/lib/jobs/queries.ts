@@ -41,6 +41,7 @@ type StageRow = {
   sla_days: number | null;
   category: string;
   notes: string | null;
+  is_applied_entry: boolean;
 };
 
 function mapJob(row: JobRow): JobRecord | null {
@@ -91,6 +92,7 @@ function mapStage(row: StageRow): JobStage {
     slaDays: row.sla_days,
     category: row.category,
     notes: row.notes,
+    isAppliedEntry: Boolean(row.is_applied_entry),
   };
 }
 
@@ -153,7 +155,9 @@ export async function getJob(
 
   const { data: stageRows, error: stagesError } = await supabase
     .from("job_stages")
-    .select("id, key, name, sort_order, color, sla_days, category, notes")
+    .select(
+      "id, key, name, sort_order, color, sla_days, category, notes, is_applied_entry",
+    )
     .eq("tenant_id", tenantId)
     .eq("job_id", jobId)
     .order("sort_order", { ascending: true });

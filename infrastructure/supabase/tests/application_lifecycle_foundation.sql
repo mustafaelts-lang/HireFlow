@@ -1,6 +1,5 @@
 -- Focused tests: Architecture Hardening Step 1 — application lifecycle foundation
--- Single-statement DO block; creates temporary fixtures and cleans them up.
--- Run only after migration 20260805050000_application_lifecycle_foundation.sql is applied.
+-- Compatible with Step 2+ schema (current_job_stage_id + Applied entry stages).
 
 do $$
 declare
@@ -12,9 +11,10 @@ declare
   v_candidate_a uuid := gen_random_uuid();
   v_candidate_a2 uuid := gen_random_uuid();
   v_candidate_b uuid := gen_random_uuid();
+  v_stage_a uuid := gen_random_uuid();
+  v_stage_a2 uuid := gen_random_uuid();
+  v_stage_b uuid := gen_random_uuid();
   v_app_active uuid;
-  v_app_historical uuid;
-  v_app_second_historical uuid;
   v_ok boolean;
 begin
   insert into public.tenants (id, name, slug)
@@ -28,33 +28,35 @@ begin
     (v_job_a2, v_tenant_a, 'Step1 Job A2', 'open'),
     (v_job_b, v_tenant_b, 'Step1 Job B', 'open');
 
+  insert into public.job_stages (
+    id, tenant_id, job_id, key, name, sort_order, color, category, is_applied_entry
+  ) values
+    (v_stage_a, v_tenant_a, v_job_a, 'applied', 'Applied', 1, '#64748B', 'intake', true),
+    (v_stage_a2, v_tenant_a, v_job_a2, 'applied', 'Applied', 1, '#64748B', 'intake', true),
+    (v_stage_b, v_tenant_b, v_job_b, 'applied', 'Applied', 1, '#64748B', 'intake', true);
+
   insert into public.candidates (id, tenant_id, full_name, email)
   values
     (v_candidate_a, v_tenant_a, 'Step1 Candidate A', 'step1-a-' || replace(v_candidate_a::text, '-', '') || '@example.test'),
     (v_candidate_a2, v_tenant_a, 'Step1 Candidate A2', 'step1-a2-' || replace(v_candidate_a2::text, '-', '') || '@example.test'),
     (v_candidate_b, v_tenant_b, 'Step1 Candidate B', 'step1-b-' || replace(v_candidate_b::text, '-', '') || '@example.test');
 
-  -- -----------------------------------------------------------------------
-  -- multiple historical applications allowed for same candidate + job
-  -- -----------------------------------------------------------------------
   insert into public.applications (
-    id, tenant_id, job_id, candidate_id, current_stage, status
+    tenant_id, job_id, candidate_id, status
   ) values (
-    gen_random_uuid(), v_tenant_a, v_job_a, v_candidate_a, 'applied', 'withdrawn'
-  )
-  returning id into v_app_historical;
+    v_tenant_a, v_job_a, v_candidate_a, 'withdrawn'
+  );
 
   insert into public.applications (
-    id, tenant_id, job_id, candidate_id, current_stage, status
+    tenant_id, job_id, candidate_id, status
   ) values (
-    gen_random_uuid(), v_tenant_a, v_job_a, v_candidate_a, 'applied', 'disqualified'
-  )
-  returning id into v_app_second_historical;
+    v_tenant_a, v_job_a, v_candidate_a, 'disqualified'
+  );
 
   insert into public.applications (
-    id, tenant_id, job_id, candidate_id, current_stage, status
+    tenant_id, job_id, candidate_id, status
   ) values (
-    gen_random_uuid(), v_tenant_a, v_job_a, v_candidate_a, 'applied', 'active'
+    v_tenant_a, v_job_a, v_candidate_a, 'active'
   )
   returning id into v_app_active;
 
@@ -68,14 +70,11 @@ begin
     raise exception 'FAIL: expected 3 historical/active applications for same candidate+job';
   end if;
 
-  -- -----------------------------------------------------------------------
-  -- second active application for same candidate+job rejected
-  -- -----------------------------------------------------------------------
   begin
     insert into public.applications (
-      tenant_id, job_id, candidate_id, current_stage, status
+      tenant_id, job_id, candidate_id, status
     ) values (
-      v_tenant_a, v_job_a, v_candidate_a, 'applied', 'active'
+      v_tenant_a, v_job_a, v_candidate_a, 'active'
     );
     raise exception 'FAIL: second active application should have been rejected';
   exception
@@ -83,9 +82,6 @@ begin
       null;
   end;
 
-  -- -----------------------------------------------------------------------
-  -- application job_id cannot be changed
-  -- -----------------------------------------------------------------------
   begin
     update public.applications
     set job_id = v_job_a2
@@ -98,9 +94,6 @@ begin
       end if;
   end;
 
-  -- -----------------------------------------------------------------------
-  -- application candidate_id cannot be changed
-  -- -----------------------------------------------------------------------
   begin
     update public.applications
     set candidate_id = v_candidate_a2
@@ -113,9 +106,6 @@ begin
       end if;
   end;
 
-  -- -----------------------------------------------------------------------
-  -- application tenant_id cannot be changed
-  -- -----------------------------------------------------------------------
   begin
     update public.applications
     set tenant_id = v_tenant_b
@@ -128,14 +118,11 @@ begin
       end if;
   end;
 
-  -- -----------------------------------------------------------------------
-  -- cross-tenant integrity remains enforced
-  -- -----------------------------------------------------------------------
   begin
     insert into public.applications (
-      tenant_id, job_id, candidate_id, current_stage, status
+      tenant_id, job_id, candidate_id, status
     ) values (
-      v_tenant_a, v_job_b, v_candidate_a, 'applied', 'active'
+      v_tenant_a, v_job_b, v_candidate_a, 'active'
     );
     raise exception 'FAIL: cross-tenant job FK should have been rejected';
   exception
@@ -145,9 +132,9 @@ begin
 
   begin
     insert into public.applications (
-      tenant_id, job_id, candidate_id, current_stage, status
+      tenant_id, job_id, candidate_id, status
     ) values (
-      v_tenant_a, v_job_a, v_candidate_b, 'applied', 'active'
+      v_tenant_a, v_job_a, v_candidate_b, 'active'
     );
     raise exception 'FAIL: cross-tenant candidate FK should have been rejected';
   exception
@@ -155,20 +142,26 @@ begin
       null;
   end;
 
-  -- Allowed: same candidate active on a different job
   insert into public.applications (
-    tenant_id, job_id, candidate_id, current_stage, status
+    tenant_id, job_id, candidate_id, status
   ) values (
-    v_tenant_a, v_job_a2, v_candidate_a, 'applied', 'active'
+    v_tenant_a, v_job_a2, v_candidate_a, 'active'
   );
 
   v_ok := true;
 
-  -- cleanup (order matters for FKs)
+  perform set_config('hireflow.allow_event_maintenance', '1', true);
+
+  delete from public.application_stage_events
+  where tenant_id in (v_tenant_a, v_tenant_b);
+
   delete from public.applications
   where tenant_id in (v_tenant_a, v_tenant_b);
 
   delete from public.candidates
+  where tenant_id in (v_tenant_a, v_tenant_b);
+
+  delete from public.job_stages
   where tenant_id in (v_tenant_a, v_tenant_b);
 
   delete from public.jobs

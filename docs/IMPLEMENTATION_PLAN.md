@@ -253,7 +253,7 @@ Candidate may withdraw at any active stage → withdrawn
 | `tenant_memberships`       | User↔tenant + role                         |
 | `jobs`                     | Requisition/JD/publish lifecycle           |
 | `candidates`               | Person record (no login)                   |
-| `applications`             | Candidacy + `current_stage`                |
+| `applications`             | Candidacy + `current_job_stage_id`         |
 | `application_stage_events` | Immutable stage history                    |
 | `pipeline_stages`          | Tenant stage catalog (seed new keys)       |
 | `interviews`               | Scheduled HM/other interviews              |

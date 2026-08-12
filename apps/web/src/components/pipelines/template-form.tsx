@@ -23,6 +23,7 @@ const DEFAULT_STAGES: PipelineTemplateStageInput[] = [
     slaDays: 2,
     category: "intake",
     notes: "",
+    isAppliedEntry: true,
   },
   {
     key: "cv_screening",
@@ -32,6 +33,7 @@ const DEFAULT_STAGES: PipelineTemplateStageInput[] = [
     slaDays: 3,
     category: "screening",
     notes: "",
+    isAppliedEntry: false,
   },
   {
     key: "interview",
@@ -41,6 +43,7 @@ const DEFAULT_STAGES: PipelineTemplateStageInput[] = [
     slaDays: 7,
     category: "interview",
     notes: "",
+    isAppliedEntry: false,
   },
   {
     key: "offer",
@@ -50,6 +53,7 @@ const DEFAULT_STAGES: PipelineTemplateStageInput[] = [
     slaDays: 5,
     category: "offer",
     notes: "",
+    isAppliedEntry: false,
   },
   {
     key: "hired",
@@ -59,6 +63,7 @@ const DEFAULT_STAGES: PipelineTemplateStageInput[] = [
     slaDays: null,
     category: "hired",
     notes: "",
+    isAppliedEntry: false,
   },
 ];
 
