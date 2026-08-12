@@ -148,8 +148,8 @@ The central pipeline record.
 | `tenant_id`            | UUID FK              |                                                    |
 | `job_id`               | UUID FK → jobs       |                                                    |
 | `candidate_id`         | UUID FK → candidates |                                                    |
-| `current_stage`        | TEXT NOT NULL        | Stage key                                          |
-| `status`               | TEXT                 | `active`, `terminal` (derived or stored)           |
+| `current_stage`        | TEXT NOT NULL        | Pipeline stage key (stage ID foundation comes later) |
+| `status`               | TEXT NOT NULL        | Lifecycle state (not derived from stage names)       |
 | `reject_reason_code`   | TEXT NULL            | Required when rejected                             |
 | `hired_at`             | TIMESTAMPTZ NULL     |                                                    |
 | `start_date`           | DATE NULL            |                                                    |
@@ -163,12 +163,19 @@ The central pipeline record.
 | `created_at`           | TIMESTAMPTZ          |                                                    |
 | `updated_at`           | TIMESTAMPTZ          |                                                    |
 
+**Lifecycle vs pipeline stage:**
+
+- `status` is **application lifecycle state**: `active`, `hired`, `disqualified`, `withdrawn`, `transferred`.
+- Pipeline position is separate (`current_stage` today; `current_job_stage_id` in a later hardening step).
+- Do **not** derive lifecycle state from arbitrary stage names.
+
 **Constraints:**
 
-- `UNIQUE (tenant_id, job_id, candidate_id)` for MVP (one application row per pair; reopen updates same row)
+- Partial unique: at most one row with `status = 'active'` per `(tenant_id, job_id, candidate_id)` — historical (non-active) applications for the same pair are allowed
+- Identity fields `tenant_id`, `candidate_id`, and `job_id` are **immutable after insert** (trigger-enforced). Moving a candidacy to another job creates a new application row in a later step — never rewrite `job_id`
 - FK integrity: job and candidate must share same `tenant_id`
 
-**Indexes:** `(tenant_id, job_id, current_stage)`, `(tenant_id, candidate_id)`
+**Indexes:** `(tenant_id, job_id, current_stage)`, `(tenant_id, candidate_id)`, partial unique on active `(tenant_id, job_id, candidate_id)`
 
 ### 3.7 `application_stage_events`
 
@@ -390,10 +397,11 @@ Generic security / admin audit trail.
 ## 5. Referential & tenancy integrity rules
 
 1. `applications.job_id` and `applications.candidate_id` must reference rows with the same `tenant_id` as the application.
-2. Child rows (`interviews`, `offers`, `communications`, etc.) inherit and store `tenant_id` for query efficiency and isolation.
-3. Public apply must resolve tenant **from the job’s apply token**, never from client-supplied free-form tenant ids alone.
-4. Deletes of tenants are operational events (export + purge), not casual cascades in app UI.
-5. Prefer restrict/soft-delete on jobs with applications; do not orphan history.
+2. `applications.tenant_id`, `applications.candidate_id`, and `applications.job_id` are immutable after insert.
+3. Child rows (`interviews`, `offers`, `communications`, etc.) inherit and store `tenant_id` for query efficiency and isolation.
+4. Public apply must resolve tenant **from the job’s apply token**, never from client-supplied free-form tenant ids alone.
+5. Deletes of tenants are operational events (export + purge), not casual cascades in app UI.
+6. Prefer restrict/soft-delete on jobs with applications; do not orphan history.
 
 ---
 
@@ -402,6 +410,7 @@ Generic security / admin audit trail.
 Align with RECRUITMENT_WORKFLOW.md and PRODUCT_REQUIREMENTS.md:
 
 - **Job status:** `draft`, `open`, `on_hold`, `closed`, `filled`
+- **Application lifecycle status:** `active`, `hired`, `disqualified`, `withdrawn`, `transferred` (system-level; separate from pipeline stage)
 - **Application stages:** `applied`, `cv_screening`, `phone_screening`, `interview`, `reference_check`, `offer`, `pre_hire`, `hired`, `rejected`, `withdrawn`
 - **Offer status:** `draft`, `sent`, `accepted`, `declined`, `rescinded`, `expired`
 - **Checklist item status:** `pending`, `completed`, `waived`

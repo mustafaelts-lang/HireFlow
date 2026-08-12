@@ -369,7 +369,9 @@ SLA guidance (soft, not system-enforced in MVP):
 
 - Same candidate email may have multiple applications across jobs.
 - Same candidate should not have two **active** applications for the **same** job.
-- After terminal outcome, reopen or new application policy: MVP prefers **reopen** for the same job.
+- Multiple **historical** (non-active) applications for the same candidate + job are allowed; each application row keeps an immutable identity (`tenant_id`, `candidate_id`, `job_id`).
+- Lifecycle status (`active` / `hired` / `disqualified` / `withdrawn` / `transferred`) is separate from pipeline stage. Do not treat stage names as lifecycle state.
+- Re-application to the same job after a non-active outcome is a **new application row** (future workflow), not rewriting the prior row’s `job_id`.
 
 ---
 

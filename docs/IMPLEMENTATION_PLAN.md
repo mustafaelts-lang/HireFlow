@@ -173,7 +173,7 @@ Items below are **not all MVP**. They are called out so the model does not paint
 | **Budget / headcount approval** before JD publish | Optional Job field `approval_status` or note; full approval workflow later | Should (simple field) / full Later |
 | **Internal vs external** candidate                | `candidate_type` or application flag                                       | Should                             |
 | **Sourcing beyond apply**                         | Keep manual candidate add for referrals/agencies                           | Must                               |
-| **Duplicate applications**                        | One active application per candidate+job; show existing if re-apply        | Must                               |
+| **Duplicate applications**                        | One **active** application per candidate+job; historical rows allowed; re-apply = new row later | Must                               |
 | **Interview no-show / cancel**                    | Interview statuses already planned                                         | Must                               |
 | **Background check** (distinct from references)   | Optional checklist item or later stage                                     | Later (region-dependent)           |
 | **Medical / fitness checks**                      | Checklist item where legally required                                      | Later                              |
