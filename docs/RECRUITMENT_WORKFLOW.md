@@ -373,6 +373,9 @@ SLA guidance (soft, not system-enforced in MVP):
 - Lifecycle status (`active` / `hired` / `disqualified` / `withdrawn` / `transferred`) is separate from pipeline stage. Do not treat stage names as lifecycle state.
 - New applications enter the job’s designated **Applied entry stage** (`job_stages.is_applied_entry`). Applied and Review are different stages; recruiters move Applied → Review manually.
 - Pipeline transitions use `transition_application_stage`. Transitions into hired/closed (lifecycle-terminal) stages are rejected until dedicated lifecycle workflows exist.
+- Forward moves that skip intermediate `sort_order` stages require acknowledgement; skipping is allowed after confirm. Backward moves are not treated as skips.
+- **Disqualify** is a lifecycle action (category + detailed reason + actor + time), not a pipeline stage. Last `current_job_stage_id` is retained; user-facing outcome is Disqualified.
+- **Hired** in Job Workspace is a lifecycle outcome filter (`status = 'hired'`), not a normal Move Stage target.
 - Re-application to the same job after a non-active outcome is a **new application row** (future workflow), not rewriting the prior row’s `job_id`.
 
 ---

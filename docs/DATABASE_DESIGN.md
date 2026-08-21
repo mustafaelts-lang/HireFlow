@@ -169,6 +169,9 @@ The central pipeline record.
 - Pipeline position is **only** `current_job_stage_id` → `job_stages` for the same `job_id`.
 - Do **not** derive lifecycle state from arbitrary stage names.
 - New applications are created in the job’s designated **Applied entry stage** (`job_stages.is_applied_entry`), not “first by sort order” and not generic intake.
+- **Hired** in product UI may appear beside stage tabs but is a **lifecycle outcome filter** (`status = 'hired'`), not a Move Stage destination. Entering Hired requires a dedicated hire workflow (not Step 3).
+- **Disqualified** is a lifecycle action/outcome. On DQ, `status = 'disqualified'` and `current_job_stage_id` remains the **last pipeline stage reached**. User-facing current outcome = Disqualified; the stage id is historical context, not “still in that stage.”
+- `job_stages.sort_order` is **normal pipeline progression order** (also MVP display order). Forward Move Stage skips = intermediates with sort_order strictly between from and to; backward moves are not skips.
 
 **Constraints:**
 
@@ -178,7 +181,15 @@ The central pipeline record.
 - `current_job_stage_id` changes only via `transition_application_stage` (guard trigger)
 - FK integrity: job and candidate must share same `tenant_id`
 
-**Indexes:** `(tenant_id, job_id, current_job_stage_id)`, `(tenant_id, candidate_id)`, partial unique on active `(tenant_id, job_id, candidate_id)`
+**Indexes:** `(tenant_id, job_id, current_job_stage_id)`, `(tenant_id, job_id, status, current_job_stage_id)`, `(tenant_id, candidate_id)`, partial unique on active `(tenant_id, job_id, candidate_id)`
+
+### 3.6b `disqualification_categories` / `application_disqualifications`
+
+Tenant-configurable DQ categories (seeded defaults). Append-only `application_disqualifications` is the **authoritative** disqualification history (category_id, detailed_reason, actor_user_id, occurred_at, from-stage snapshots), written via `disqualify_application`. `applications.reject_reason_code` may mirror category.key for backward compatibility only — it is not the source of truth. Never fabricate historical reasons.
+
+### 3.6c Interview assessments
+
+`assessment_templates` → `assessment_template_versions` (`draft` | `published`) → `assessment_template_fields` (including `field_config` jsonb). **Draft** versions/fields are editable (labels, options, order, add/remove). **Published** versions/fields are immutable; further edits require a new version. `interview_assessments` (`application_id` required, `interview_id` optional, draft|finalized) → `interview_assessment_answers` with immutable snapshots of `field_key`, `field_label`, `field_type`, and **`field_config`**. Assessments may only be created from a **published** template version. Finalized assessments/answers are immutable in Step 3.
 
 ### 3.7 `application_stage_events`
 
@@ -463,7 +474,7 @@ Store as text with check constraints or Postgres enums. Text + check is more mig
 
 | Access pattern         | Supporting index                                            |
 | ---------------------- | ----------------------------------------------------------- |
-| Board by job           | `(tenant_id, job_id, current_job_stage_id)` on applications |
+| Board by job           | `(tenant_id, job_id, status, current_job_stage_id)` on applications |
 | Public apply lookup    | unique `jobs.public_apply_token`                            |
 | Candidate search       | `(tenant_id, email)`, trigram/`ILIKE` strategy later        |
 | Upcoming interviews    | `(tenant_id, scheduled_starts_at)` WHERE status = scheduled |
